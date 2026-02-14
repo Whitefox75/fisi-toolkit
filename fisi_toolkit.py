@@ -5,6 +5,18 @@ import math
 import ipaddress
 import pyperclip
 import random
+import os
+import sys
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 # Konfiguration des Erscheinungsbildes
 ctk.set_appearance_mode("System")  # Standard: System (Light/Dark je nach OS)
@@ -531,128 +543,205 @@ class SettingsTab(ctk.CTkFrame):
 
 class UnitConverterTab(ctk.CTkFrame):
     """
-    Tab für Einheiten-Umrechnung (Bit, Byte, KiB, etc.).
-    Features: Live-Berechnung, detaillierte Aufschlüsselung.
+    Tab für Einheiten-Umrechnung (Bit, Byte, KiB, KB, etc.).
+    Features: Premium UI (Cards), Detaillierter Rechenweg (Text).
     """
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
         
-        self.label_title = ctk.CTkLabel(self, text="Einheiten-Rechner", font=("Arial", 20, "bold"))
-        self.label_title.pack(pady=10)
-
-        # Input Area
-        self.frame_input = ctk.CTkFrame(self)
-        self.frame_input.pack(pady=10, padx=10, fill="x")
-
-        self.entry_val = ctk.CTkEntry(self.frame_input, placeholder_text="Wert eingeben...")
-        self.entry_val.pack(side="left", padx=10, expand=True, fill="x")
-        self.entry_val.bind("<KeyRelease>", self.calculate)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(0, weight=0) # Title
+        self.grid_rowconfigure(1, weight=0) # Input Card
+        self.grid_rowconfigure(2, weight=0) # Output Card
         
-        self.units = ["Bit", "Byte", "KiB", "MiB", "GiB", "TiB"]
-        self.option_unit = ctk.CTkOptionMenu(self.frame_input, values=self.units, command=lambda x: self.calculate())
-        self.option_unit.pack(side="left", padx=10)
+        # Title
+        self.label_title = ctk.CTkLabel(self, text="Einheiten-Rechner", font=("Arial", 22, "bold"))
+        self.label_title.grid(row=0, column=0, pady=(20, 15))
 
-        # Output Area (Scrollable)
-        self.frame_results = ctk.CTkScrollableFrame(self)
-        self.frame_results.pack(pady=10, padx=10, fill="both", expand=True)
-        self.frame_results.grid_columnconfigure(0, weight=1)
+        # Definitions
+        self.units_map = {
+            "Bit":   ("Bit (b)", 1/8, "-"),
+            "Byte":  ("Byte (B)", 1, "-"),
+            
+            "KiB":   ("Kibibyte (KiB)", 1024, "2^10"),
+            "MiB":   ("Mebibyte (MiB)", 1024**2, "2^20"),
+            "GiB":   ("Gibibyte (GiB)", 1024**3, "2^30"),
+            "TiB":   ("Tebibyte (TiB)", 1024**4, "2^40"),
+            "PiB":   ("Pebibyte (PiB)", 1024**5, "2^50"),
+            
+            "KB":    ("Kilobyte (KB)", 1000, "10^3"),
+            "MB":    ("Megabyte (MB)", 1000**2, "10^6"),
+            "GB":    ("Gigabyte (GB)", 1000**3, "10^9"),
+            "TB":    ("Terabyte (TB)", 1000**4, "10^12"),
+            "PB":    ("Petabyte (PB)", 1000**5, "10^15")
+        }
+        self.unit_names = list(self.units_map.keys())
 
-        # Dictionary für Label Referenzen
-        self.result_widgets = {}
+        # --- Card 1: EINGABE ---
+        self.card_in = ctk.CTkFrame(self, fg_color=("gray85", "gray25"), corner_radius=10)
+        self.card_in.grid(row=1, column=0, padx=20, pady=10, sticky="ew")
+        
+        ctk.CTkLabel(self.card_in, text="Eingabe", font=("Arial", 12, "bold"), text_color="gray50").pack(anchor="w", padx=15, pady=(10, 0))
+        
+        self.frame_in_row = ctk.CTkFrame(self.card_in, fg_color="transparent")
+        self.frame_in_row.pack(padx=15, pady=(5, 15), fill="x")
+        
+        self.entry_amount = ctk.CTkEntry(self.frame_in_row, placeholder_text="Menge", width=120, font=("Arial", 14), justify="center")
+        self.entry_amount.pack(side="left", padx=(0, 10))
+        self.entry_amount.bind("<KeyRelease>", self.calculate)
+        
+        self.option_src = ctk.CTkOptionMenu(self.frame_in_row, values=self.unit_names, command=self.calculate, width=120)
+        self.option_src.set("GB")
+        self.option_src.pack(side="left")
 
-        # Initialisierung der Zeilen für jede Einheit
-        for i, u in enumerate(self.units):
-            card = ctk.CTkFrame(self.frame_results)
-            card.grid(row=i, column=0, padx=5, pady=5, sticky="ew")
-            
-            # Titel (z.B. "Mebibyte (MiB)")
-            long_names = {
-                "Bit": "Bit (b)", "Byte": "Byte (B)", 
-                "KiB": "Kibibyte (KiB)", "MiB": "Mebibyte (MiB)", 
-                "GiB": "Gibibyte (GiB)", "TiB": "Tebibyte (TiB)"
-            }
-            
-            lbl_title = ctk.CTkLabel(card, text=long_names[u], font=("Arial", 12, "bold"), text_color="gray70")
-            lbl_title.pack(anchor="w", padx=10, pady=(5,0))
-            
-            # Wert (Formatiert)
-            lbl_val = ctk.CTkLabel(card, text="---", font=("Consolas", 14))
-            lbl_val.pack(anchor="w", padx=10, pady=(0,0))
-            
-            # Rechenweg/Dezimal Info
-            lbl_info = ctk.CTkLabel(card, text="", font=("Arial", 10), text_color="gray60")
-            lbl_info.pack(anchor="w", padx=10, pady=(0,5))
+        # --- Arrow ---
+        # self.lbl_arrow = ctk.CTkLabel(self, text="⬇", font=("Arial", 20))
+        # self.lbl_arrow.grid(row=2, column=0, pady=0)
 
-            self.result_widgets[u] = {
-                "val": lbl_val,
-                "info": lbl_info
-            }
+        # --- Card 2: ERGEBNIS ---
+        self.card_out = ctk.CTkFrame(self, fg_color=("white", "gray20"), corner_radius=10, border_width=2, border_color="#1f6aa5")
+        self.card_out.grid(row=3, column=0, padx=20, pady=10, sticky="ew")
+        
+        ctk.CTkLabel(self.card_out, text="Ergebnis", font=("Arial", 12, "bold"), text_color="#1f6aa5").pack(anchor="w", padx=15, pady=(10, 0))
+        
+        self.frame_out_row = ctk.CTkFrame(self.card_out, fg_color="transparent")
+        self.frame_out_row.pack(padx=15, pady=(5, 5), fill="x")
+        
+        self.label_result = ctk.CTkLabel(self.frame_out_row, text="---", font=("Consolas", 28, "bold"), text_color="#1f6aa5")
+        self.label_result.pack(side="left", padx=(0, 10))
+        
+        self.option_dst = ctk.CTkOptionMenu(self.frame_out_row, values=self.unit_names, command=self.calculate, width=120)
+        self.option_dst.set("GiB")
+        self.option_dst.pack(side="right")
+        
+        self.label_unit_full = ctk.CTkLabel(self.card_out, text="", font=("Arial", 12), text_color="gray60")
+        self.label_unit_full.pack(anchor="w", padx=15, pady=(0, 15))
+
+
+        # --- Card 3: RECHENWEG ---
+        self.card_path = ctk.CTkFrame(self, fg_color="transparent")
+        self.card_path.grid(row=4, column=0, padx=20, pady=10, sticky="ew")
+        
+        ctk.CTkLabel(self.card_path, text="Rechenweg:", font=("Arial", 12, "bold")).pack(anchor="w", padx=0, pady=(0, 5))
+        
+        self.txt_explanation = ctk.CTkTextbox(self.card_path, height=120, fg_color=("gray95", "gray15"), text_color=("black", "white"), font=("Consolas", 12))
+        self.txt_explanation.pack(fill="x")
+        self.txt_explanation.configure(state="disabled")
+
 
     def calculate(self, event=None):
-        val_str = self.entry_val.get()
-        src_unit = self.option_unit.get()
-
-        if not val_str:
-            for u in self.units:
-                self.result_widgets[u]["val"].configure(text="---")
-                self.result_widgets[u]["info"].configure(text="")
-            return
-
         try:
+            val_str = self.entry_amount.get().replace(",", ".")
+            if not val_str:
+                self.label_result.configure(text="---")
+                self.set_explanation("")
+                return
             val = float(val_str)
         except ValueError:
+            self.label_result.configure(text="Err")
+            self.set_explanation("Ungültige Eingabe.")
             return
 
-        # Basis: Bit
-        bits = 0
-        if src_unit == "Bit": bits = val
-        elif src_unit == "Byte": bits = val * 8
-        elif src_unit == "KiB": bits = val * 8 * 1024
-        elif src_unit == "MiB": bits = val * 8 * 1024**2
-        elif src_unit == "GiB": bits = val * 8 * 1024**3
-        elif src_unit == "TiB": bits = val * 8 * 1024**4
+        src = self.option_src.get()
+        dst = self.option_dst.get()
 
-        # Berechne alle Einheiten (Binär)
-        conversions = {
-            "Bit":  (bits, "Basis"),
-            "Byte": (bits / 8, "/ 8"),
-            "KiB":  (bits / (8 * 1024), "/ 8 / 1024"),
-            "MiB":  (bits / (8 * 1024**2), r"/ 8 / 1024²"),
-            "GiB":  (bits / (8 * 1024**3), r"/ 8 / 1024³"),
-            "TiB":  (bits / (8 * 1024**4), r"/ 8 / 1024⁴")
-        }
+        # Faktoren holen
+        _, src_factor, src_base = self.units_map[src]
+        _, dst_factor, dst_base = self.units_map[dst]
         
-        # Dezimal-Äquivalente (1000er Basis)
-        decimal_conversions = {
-            "Bit":  bits,
-            "Byte": bits / 8,
-            "KiB":  bits / (8 * 1000),      # KB
-            "MiB":  bits / (8 * 1000**2),   # MB
-            "GiB":  bits / (8 * 1000**3),   # GB
-            "TiB":  bits / (8 * 1000**4)    # TB
-        }
+        # 1. In Bytes umrechnen
+        bytes_val = val * src_factor
+        
+        # 2. In Ziel-Einheit umrechnen
+        result = bytes_val / dst_factor
 
-        for u in self.units:
-            res_val, formula = conversions[u]
-            dec_val = decimal_conversions[u]
-            
-            # Formatierung Binär
-            txt_val = f"{res_val:,.10f}".rstrip("0").rstrip(".") if res_val % 1 != 0 else f"{int(res_val):,}"
-            
-            # Info mit Dezimal-Äquivalent
-            if u == "Bit":
-                txt_info = "Basiswert"
-            elif u == "Byte":
-                txt_info = "8 Bits = 1 Byte"
-            else:
-                # Zeige Dezimal-Äquivalent (KB, MB, GB, TB) - 1000er Basis
-                dec_unit = u.replace("i", "")  # KiB -> KB, MiB -> MB, etc.
-                dec_formatted = f"{dec_val:,.10f}".rstrip("0").rstrip(".") if dec_val % 1 != 0 else f"{int(dec_val):,}"
-                txt_info = f"≈ {dec_formatted} {dec_unit} (Dezimal, 1000er-Basis)"
-            
-            self.result_widgets[u]["val"].configure(text=txt_val)
-            self.result_widgets[u]["info"].configure(text=txt_info)
+        # Ergebnis anzeigen
+        if result >= 1 or result == 0:
+            res_str = f"{result:,.4f}".rstrip("0").rstrip(".").rstrip(",")
+        else:
+            res_str = f"{result:.10f}".rstrip("0").rstrip(".")
 
+        self.label_result.configure(text=res_str)
+        self.label_unit_full.configure(text=self.units_map[dst][0])
+
+        # Erklärung generieren
+        lines = []
+        
+        # Schritt 1: Zu Bytes
+        if src == "Byte":
+            lines.append(f"1. {val} {src} sind bereits Bytes.")
+        elif src == "Bit":
+            lines.append(f"1. {val} {src} / 8 = {bytes_val:,.4f} Byte")
+        else:
+            op_str = f"* {src_factor:,.0f}" if src_factor > 1 else f"* {src_factor}"
+            if src_base != "-": op_str += f" ({src_base})"
+            lines.append(f"1. {val} {src} in Byte umrechnen:")
+            lines.append(f"   {val} {op_str} = {bytes_val:,.2f} Byte")
+
+        # Schritt 2: Zu Ziel
+        if dst == "Byte":
+            lines.append(f"2. {bytes_val:,.2f} Byte ist die Zieleinheit.")
+        elif dst == "Bit":
+            lines.append(f"2. {bytes_val:,.2f} Byte * 8 = {result:,.2f} Bit")
+        else:
+            lines.append(f"2. {bytes_val:,.2f} Byte in {dst} umrechnen:")
+            op_str = f"/ {dst_factor:,.0f}" if dst_factor > 1 else f"/ {dst_factor}"
+            if dst_base != "-": op_str += f" ({dst_base})"
+            lines.append(f"   {bytes_val:,.2f} {op_str} = {res_str} {dst}")
+
+        self.set_explanation("\n".join(lines))
+
+    def set_explanation(self, text):
+        self.txt_explanation.configure(state="normal")
+        self.txt_explanation.delete("0.0", "end")
+        self.txt_explanation.insert("0.0", text)
+        self.txt_explanation.configure(state="disabled")
+
+
+
+
+
+
+class OSITab(ctk.CTkFrame):
+    """
+    Tab für das OSI-Schichtmodell.
+    """
+    def __init__(self, master, **kwargs):
+        super().__init__(master, **kwargs)
+        
+        self.label_title = ctk.CTkLabel(self, text="OSI-Schichtmodell", font=("Arial", 20, "bold"))
+        self.label_title.pack(pady=10)
+
+        self.scroll_frame = ctk.CTkScrollableFrame(self)
+        self.scroll_frame.pack(fill="both", expand=True, padx=10, pady=10)
+
+        # Data for layers (7 to 1)
+        layers = [
+            (7, "Anwendungsschicht (Application)", "Stellt Funktionen für Anwendungen bereit (Datenaustausch, E-Mail).", "HTTP, FTP, SMTP, DNS", "Daten"),
+            (6, "Darstellungsschicht (Presentation)", "Umwandlung der Systemabhängigen Daten in ein unabhängiges Format (Verschlüsselung, Kompression).", "ASCII, JPEG, SSL/TLS", "Daten"),
+            (5, "Sitzungsschicht (Session)", "Steuerung der Verbindungen und des Datenaustauschs.", "RPC, NetBIOS", "Daten"),
+            (4, "Transportschicht (Transport)", "Segmentierung des Datenstroms, Staukontrolle, Fehlerkorrektur.", "TCP, UDP", "Segmente"),
+            (3, "Vermittlungsschicht (Network)", "Logische Adressierung (IP) und Routing.", "IP, ICMP, IPsec", "Pakete"),
+            (2, "Sicherungsschicht (Data Link)", "Physische Adressierung (MAC), Zugriffskontrolle, Fehlererkennung.", "Ethernet, WLAN, ARP", "Frames"),
+            (1, "Bitübertragungsschicht (Physical)", "Übertragung der Bitfolge über das Medium (Kabel, Funk).", "DSL, ISDN, Bluetooth", "Bits")
+        ]
+
+        for num, name, desc, protos, pdu in layers:
+            card = ctk.CTkFrame(self.scroll_frame)
+            card.pack(fill="x", pady=5, padx=5)
+            
+            # Header
+            header = ctk.CTkFrame(card, fg_color="#1f6aa5", height=30)
+            header.pack(fill="x")
+            ctk.CTkLabel(header, text=f"{num}. {name}", text_color="white", font=("Arial", 12, "bold")).pack(side="left", padx=10)
+            ctk.CTkLabel(header, text=f"PDU: {pdu}", text_color="white", font=("Arial", 10)).pack(side="right", padx=10)
+
+            # Content
+            content = ctk.CTkFrame(card, fg_color="transparent")
+            content.pack(fill="x", padx=10, pady=5)
+            
+            ctk.CTkLabel(content, text=desc, wraplength=400, justify="left").pack(anchor="w")
+            ctk.CTkLabel(content, text=f"Protokolle: {protos}", text_color="gray70", font=("Arial", 10)).pack(anchor="w", pady=(5,0))
 
 
 class InfoTab(ctk.CTkFrame):
@@ -702,7 +791,7 @@ class App(ctk.CTk):
         self.sidebar_frame = ctk.CTkFrame(self, width=self.sidebar_width_expanded, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
         self.sidebar_frame.grid_propagate(False)  # Prevent children from resizing the frame
-        self.sidebar_frame.grid_rowconfigure(6, weight=1) # Spacer pushes bottom elements down
+        self.sidebar_frame.grid_rowconfigure(7, weight=1) # Spacer pushes bottom elements down (Row 7, after OSI)
         
         # Toggle Button
         self.btn_toggle = ctk.CTkButton(self.sidebar_frame, text="☰", width=30, height=30, fg_color="transparent", 
@@ -714,52 +803,50 @@ class App(ctk.CTk):
         self.logo_label = ctk.CTkLabel(self.sidebar_frame, text="FISI Toolkit", font=ctk.CTkFont(size=16, weight="bold"))
         self.logo_label.grid(row=1, column=0, padx=10, pady=(0,10), sticky="ew")
 
+        # Set App Icon if exists
+        try:
+            self.iconbitmap(resource_path("icon.ico"))
+        except:
+            pass
+
         # Navigation Buttons
         self.nav_buttons = {}
         self.current_frame = None
         
         # Format: (Text, Icon/Short, Name, Class)
+
+        # Format: (Text, Icon, Name, Class)
         self.btn_data = [
-            ("Netzwerk", "N", "network", NetworkTab),
-            ("Speicher", "S", "storage", StorageTab),
-            ("Logik", "L", "logic", LogicTab),
-            ("Einheiten", "E", "converter", UnitConverterTab),
-            ("Einstellungen", "⚙", "settings", SettingsTab), 
-            ("Info", "i", "info", InfoTab)
+            ("Einheiten", "📏", "converter", UnitConverterTab),
+            ("Logik", "🧠", "logic", LogicTab),
+            ("Netzwerk", "🌐", "network", NetworkTab),
+            ("Speicher", "💾", "storage", StorageTab),
+            ("OSI-Modell", "📚", "osi", OSITab),
+            ("Einstellungen", "⚙️", "settings", SettingsTab), 
+            ("Info", "ℹ️", "info", InfoTab)
         ]
 
         self.frames = {}
         
-        # Layout Order: 1..5 for Tools, 7=Settings, 8=Info. 6 is Spacer.
-        # We need to map list index to row index manually to pu Settings/Info at bottom
-        
-        for i, (text, short, name, cls) in enumerate(self.btn_data):
-            # Init Frame
+        # Init all frames
+        for i, (text, icon, name, cls) in enumerate(self.btn_data):
             self.frames[name] = cls(self)
             
-            # Determine Row
-            # Tools: row 2-5
-            # Settings: row 7
-            # Info: row 8
-            if name == "settings": row = 7
-            elif name == "info": row = 8
-            else: row = i + 2  # Start at row 2 to leave room for title
+            # Layout Order in Sidebar
+            # Group Tools at top (rows 2-6)
+            # Settings/Info at bottom (rows 8-9)
+            if name == "settings": row = 8
+            elif name == "info": row = 9
+            else: row = i + 2
             
-            btn = ctk.CTkButton(self.sidebar_frame, corner_radius=0, height=40, border_spacing=10, text=text,
+            btn = ctk.CTkButton(self.sidebar_frame, corner_radius=0, height=40, border_spacing=10, text=f"{icon}  {text}",
                                 fg_color="transparent", text_color=("gray10", "gray90"), hover_color=("gray70", "gray30"),
-                                anchor="w", command=lambda n=name: self.select_frame(n))
+                                anchor="w", font=ctk.CTkFont(size=14), command=lambda n=name: self.select_frame(n))
             btn.grid(row=row, column=0, sticky="ew")
             self.nav_buttons[name] = btn
 
-
-        # Sidebar Options (Bottom) - REMOVED (Duplicate)
-        # self.appearance_mode_label = ...
-        # self.appearance_mode_optionemenu = ...
-        # self.scaling_label = ...
-        # self.scaling_optionemenu = ...
-
-        # Start with Network
-        self.select_frame("network")
+        # Select first tab (Converter)
+        self.select_frame("converter")
 
     def select_frame(self, name):
         # Update Buttons
@@ -778,21 +865,18 @@ class App(ctk.CTk):
 
     def toggle_sidebar(self):
         if self.sidebar_expanded:
-            self.sidebar_width_expanded = self.sidebar_frame.winfo_width() # Save current if needed, or just use const
+            self.sidebar_width_expanded = self.sidebar_frame.winfo_width()
             self.sidebar_frame.configure(width=self.sidebar_width_collapsed)
             
-            # Hide texts, show only icons/short
+            # Hide texts, show only icons
             self.logo_label.grid_forget()
-            # self.appearance_mode_label.grid_forget()
-            # self.appearance_mode_optionemenu.grid_forget()
-            # self.scaling_label.grid_forget()
-            # self.scaling_optionemenu.grid_forget()
-            self.btn_toggle.grid(padx=5) # Adjust padding
+            self.btn_toggle.grid(padx=5) 
 
             for name, btn in self.nav_buttons.items():
-                # Find short text from data
-                short = next((d[1] for d in self.btn_data if d[2] == name), name[0])
-                btn.configure(text=short, anchor="center")
+                # Show only Icon. 
+                # Note: We need to ensure the button is wide enough or text is centered.
+                icon = next((d[1] for d in self.btn_data if d[2] == name), "?")
+                btn.configure(text=icon, anchor="center", width=40)
             
             self.sidebar_expanded = False
         else:
@@ -800,16 +884,14 @@ class App(ctk.CTk):
             
             # Show texts
             self.logo_label.grid(row=1, column=0, padx=10, pady=(0,10), sticky="ew")
-            # self.appearance_mode_label.grid(row=7, column=0, padx=20, pady=(10, 0))
-            # self.appearance_mode_optionemenu.grid(row=8, column=0, padx=20, pady=(10, 10))
-            # self.scaling_label.grid(row=9, column=0, padx=20, pady=(10, 0))
-            # self.scaling_optionemenu.grid(row=10, column=0, padx=20, pady=(10, 20))
             self.btn_toggle.grid(padx=10)
 
             for name, btn in self.nav_buttons.items():
-                # Find full text
-                text = next((d[0] for d in self.btn_data if d[2] == name), name)
-                btn.configure(text=text, anchor="w")
+                # Show Icon + Text
+                data = next((d for d in self.btn_data if d[2] == name), None)
+                if data:
+                    text_full = f"{data[1]}  {data[0]}"
+                    btn.configure(text=text_full, anchor="w", width=self.sidebar_width_expanded - 20)
                 
             self.sidebar_expanded = True
 
@@ -822,5 +904,13 @@ class App(ctk.CTk):
         ctk.set_widget_scaling(new_scaling_float)
 
 if __name__ == "__main__":
+    # Fix Taskbar Icon: Set AppUserModelID
+    try:
+        import ctypes
+        myappid = 'fisi_toolkit.tool.v1.0' # arbitrary string
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    except Exception as e:
+        print(f"Icon fix failed: {e}")
+
     app = App()
     app.mainloop()
