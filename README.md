@@ -7,6 +7,16 @@ Ein umfassendes Werkzeug für IT-Fachinformatiker mit Netzwerk-, Speicher- und L
 
 ## 📋 Features
 
+### 📊 Einheiten-Rechner
+- **Binäre Einheiten**: Bit, Byte, KiB, MiB, GiB, TiB (1024er-Basis)
+- **Dezimale Äquivalente**: KB, MB, GB, TB (1000er-Basis)
+- **Live-Berechnung**: Ergebnisse während der Eingabe
+
+### 🔢 Logik-Tab
+- **32-Bit Matrix**: Interaktive Bit-Manipulation
+- **Echtzeit-Konvertierung**: Hex ↔ Dezimal ↔ Binär
+- **Visuelle Darstellung**: Bits nach Bytes gruppiert
+
 ### 🌐 Netzwerk-Tab
 - **IP/Subnetz-Rechner**: Berechnet Netzwerkadresse, Broadcast, Hostbereich
 - **Binäre Visualisierung**: Zeigt UND-Verknüpfung von IP und Subnetzmaske
@@ -16,16 +26,6 @@ Ein umfassendes Werkzeug für IT-Fachinformatiker mit Netzwerk-, Speicher- und L
 - **RAID-Rechner**: Unterstützt RAID 0, 1, 5, 6, 10
 - **Kapazitätsberechnung**: Brutto, Netto, Effizienz
 - **Fehlertoleranz**: Zeigt maximale Ausfallsicherheit
-
-### 🔢 Logik-Tab
-- **32-Bit Matrix**: Interaktive Bit-Manipulation
-- **Echtzeit-Konvertierung**: Hex ↔ Dezimal ↔ Binär
-- **Visuelle Darstellung**: Bits nach Bytes gruppiert
-
-### 📊 Einheiten-Rechner
-- **Binäre Einheiten**: Bit, Byte, KiB, MiB, GiB, TiB (1024er-Basis)
-- **Dezimale Äquivalente**: KB, MB, GB, TB (1000er-Basis)
-- **Live-Berechnung**: Ergebnisse während der Eingabe
 
 ### 🧱 OSI Schichtmodell
 - Klar & kompakt: Lerne die 7 OSI-Schichten mit einfachen Erklärungen und praxisnahen Beispielen.
