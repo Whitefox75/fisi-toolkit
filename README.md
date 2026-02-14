@@ -27,6 +27,11 @@ Ein umfassendes Werkzeug für IT-Fachinformatiker mit Netzwerk-, Speicher- und L
 - **Dezimale Äquivalente**: KB, MB, GB, TB (1000er-Basis)
 - **Live-Berechnung**: Ergebnisse während der Eingabe
 
+### 🧱 OSI Schichtmodell
+- Klar & kompakt: Lerne die 7 OSI-Schichten mit einfachen Erklärungen und praxisnahen Beispielen.
+- Praxisorientiert: Verstehe, wie reale Netzwerkprotokolle (z. B. TCP/IP, HTTP, DNS) den einzelnen Schichten zugeordnet sind.
+- Offline verfügbar: Ideal zum Lernen und Nachschlagen – direkt vom USB-Stick, jederzeit ohne Internet.
+
 ### ⚙️ Einstellungen
 - **Design-Modi**: System, Light, Dark
 - **UI-Skalierung**: 80% - 120%
