@@ -631,7 +631,9 @@ class UnitConverterTab(ctk.CTkFrame):
 
     def calculate(self, event=None):
         try:
-            val_str = self.entry_amount.get().replace(",", ".")
+            # German Input: 1.000,50 -> 1000.50
+            # Remove thousands separator (.) then replace decimal separator (,) with (.)
+            val_str = self.entry_amount.get().replace(".", "").replace(",", ".")
             if not val_str:
                 self.label_result.configure(text="---")
                 self.set_explanation("")
@@ -655,11 +657,17 @@ class UnitConverterTab(ctk.CTkFrame):
         # 2. In Ziel-Einheit umrechnen
         result = bytes_val / dst_factor
 
-        # Ergebnis anzeigen
+        # Ergebnis anzeigen (German Format)
         if result >= 1 or result == 0:
-            res_str = f"{result:,.4f}".rstrip("0").rstrip(".").rstrip(",")
+            # Standard float formatting, then swap . and ,
+            # 1234.5678 -> 1.234,5678
+            res_str = f"{result:,.4f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            # Trim trailing zeros if decimal
+            if "," in res_str:
+                res_str = res_str.rstrip("0").rstrip(",")
         else:
-            res_str = f"{result:.10f}".rstrip("0").rstrip(".")
+            res_str = f"{result:.10f}".replace(".", ",")
+            res_str = res_str.rstrip("0").rstrip(",")
 
         self.label_result.configure(text=res_str)
         self.label_unit_full.configure(text=self.units_map[dst][0])
@@ -667,27 +675,32 @@ class UnitConverterTab(ctk.CTkFrame):
         # Erklärung generieren
         lines = []
         
+        # Helper for formatting numbers in text
+        def fmt(n):
+            s = f"{n:,.10f}".rstrip("0").rstrip(".")
+            return s.replace(",", "X").replace(".", ",").replace("X", ".")
+
         # Schritt 1: Zu Bytes
         if src == "Byte":
-            lines.append(f"1. {val} {src} sind bereits Bytes.")
+            lines.append(f"1. {fmt(val)} {src} sind bereits Bytes.")
         elif src == "Bit":
-            lines.append(f"1. {val} {src} / 8 = {bytes_val:,.4f} Byte")
+            lines.append(f"1. {fmt(val)} {src} / 8 = {fmt(bytes_val)} Byte")
         else:
-            op_str = f"* {src_factor:,.0f}" if src_factor > 1 else f"* {src_factor}"
+            op_str = f"* {fmt(src_factor)}"
             if src_base != "-": op_str += f" ({src_base})"
-            lines.append(f"1. {val} {src} in Byte umrechnen:")
-            lines.append(f"   {val} {op_str} = {bytes_val:,.2f} Byte")
+            lines.append(f"1. {fmt(val)} {src} in Byte umrechnen:")
+            lines.append(f"   {fmt(val)} {op_str} = {fmt(bytes_val)} Byte")
 
         # Schritt 2: Zu Ziel
         if dst == "Byte":
-            lines.append(f"2. {bytes_val:,.2f} Byte ist die Zieleinheit.")
+            lines.append(f"2. {fmt(bytes_val)} Byte ist die Zieleinheit.")
         elif dst == "Bit":
-            lines.append(f"2. {bytes_val:,.2f} Byte * 8 = {result:,.2f} Bit")
+            lines.append(f"2. {fmt(bytes_val)} Byte * 8 = {fmt(result)} Bit")
         else:
-            lines.append(f"2. {bytes_val:,.2f} Byte in {dst} umrechnen:")
-            op_str = f"/ {dst_factor:,.0f}" if dst_factor > 1 else f"/ {dst_factor}"
+            lines.append(f"2. {fmt(bytes_val)} Byte in {dst} umrechnen:")
+            op_str = f"/ {fmt(dst_factor)}"
             if dst_base != "-": op_str += f" ({dst_base})"
-            lines.append(f"   {bytes_val:,.2f} {op_str} = {res_str} {dst}")
+            lines.append(f"   {fmt(bytes_val)} {op_str} = {res_str} {dst}")
 
         self.set_explanation("\n".join(lines))
 
