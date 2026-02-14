@@ -1,21 +1,46 @@
-MIT License
+===============================================================================
+LICENSE TERMS FOR FISI-Toolkit
+===============================================================================
 
 Copyright (c) 2026 Ivan Krznaric-Bertic
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+This software is provided under a Dual-Licensing model. Depending on your 
+intended use, one of the following licenses applies:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+1. NON-COMMERCIAL USE (Default)
+-------------------------------
+For non-commercial use, this software is licensed under the 
+PolyForm Non-Commercial License 1.0.0.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+TERMS:
+The licensor grants you each copyright license necessary to use, modify, 
+and distribute this software, but ONLY for non-commercial purposes.
+
+"Commercial purposes" means any usage of this software by you or your 
+organization that is intended for or directed toward commercial advantage 
+or monetary compensation.
+
+Full License Text: https://polyformproject.org/licenses/non-commercial/1.0.0/
+
+
+2. COMMERCIAL USE
+-----------------
+Any use for commercial purposes is strictly prohibited without a separate 
+Commercial License Agreement from the copyright holder.
+
+If you or your organization wish to use this software for commercial purposes, 
+including but not limited to:
+- Internal business tools
+- Integration into commercial products
+- Paid consulting or services involving this software
+
+You must obtain a written "Commercial Use License". 
+
+CONTACT FOR COMMERCIAL LICENSING:
+To request a commercial license, please contact:
+Ivan_KB@web.de
+https://www.linkedin.com/in/ivan-krznaric-bertic/
+
+===============================================================================
+BY USING THIS SOFTWARE, YOU AGREE TO THESE TERMS.
+===============================================================================

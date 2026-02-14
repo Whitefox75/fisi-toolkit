@@ -672,7 +672,7 @@ class InfoTab(ctk.CTkFrame):
         self.label_author.pack(pady=10)
 
         self.btn_linkedin = ctk.CTkButton(self, text="LinkedIn Profil", 
-                                          command=lambda: webbrowser.open("www.linkedin.com/in/ivan-krznaric-bertic-60ab5333b"))
+                                          command=lambda: webbrowser.open("www.linkedin.com/in/ivan-krznaric-bertic"))
         self.btn_linkedin.pack(pady=10)
 
         self.btn_github = ctk.CTkButton(self, text="GitHub Profil", 
