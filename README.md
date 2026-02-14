@@ -89,7 +89,7 @@ Vergleiche binäre und dezimale Speichereinheiten.
 
 ## 📝 Lizenz
 
-Dieses Projekt ist unter der MIT-Lizenz lizenziert - siehe [LICENSE](LICENSE) Datei für Details.
+Dieses Projekt ist unter der Dual-Licensing Model lizensiert - siehe [LICENSE](LICENSE) Datei für Details.
 
 ## 👤 Autor
 
