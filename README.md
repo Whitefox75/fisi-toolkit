@@ -3,7 +3,7 @@
 Ein umfassendes Werkzeug für IT-Fachinformatiker mit Netzwerk-, Speicher- und Logik-Berechnungen.
 
 ![Python](https://img.shields.io/badge/python-3.8+-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+![License](https://img.shields.io/badge/license-PolyForm%20NC%20%2F%20Commercial-orange.svg)
 
 ## 📋 Features
 
