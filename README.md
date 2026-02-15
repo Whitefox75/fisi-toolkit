@@ -72,14 +72,18 @@ Die EXE findest du dann unter `dist/fisi_toolkit.exe`
 
 ## 📸 Screenshots
 
-### Netzwerk-Tab
-Berechne IP-Adressen und Subnetze mit visueller Binärdarstellung.
+### Einheiten-Rechner
+Vergleiche binäre und dezimale Speichereinheiten.
+![Einheiten-Rechner](Einheiten.png)
 
 ### Logik-Tab
 Interaktive 32-Bit-Matrix für Hex/Dez/Bin-Konvertierung.
+![Logik](Logik.png)
 
-### Einheiten-Rechner
-Vergleiche binäre und dezimale Speichereinheiten.
+### Netzwerk-Tab
+Berechne IP-Adressen und Subnetze mit visueller Binärdarstellung.
+![Netzwerk](Netzwerk.png)
+
 
 ## 🛠️ Technologie-Stack
 

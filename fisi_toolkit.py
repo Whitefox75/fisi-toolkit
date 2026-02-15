@@ -22,6 +22,89 @@ def resource_path(relative_path):
 ctk.set_appearance_mode("System")  # Standard: System (Light/Dark je nach OS)
 ctk.set_default_color_theme("blue")  # Standard-Theme: Blau
 
+class UnitConverterEngine:
+    """
+    Core logic for handling unit conversions to ensure testability independent of UI.
+    """
+    def __init__(self):
+        self.units_map = {
+            "Bit":   ("Bit (b)", 1/8, "-"),
+            "Byte":  ("Byte (B)", 1, "-"),
+            "KiB":   ("Kibibyte (KiB)", 1024, "2^10"),
+            "MiB":   ("Mebibyte (MiB)", 1024**2, "2^20"),
+            "GiB":   ("Gibibyte (GiB)", 1024**3, "2^30"),
+            "TiB":   ("Tebibyte (TiB)", 1024**4, "2^40"),
+            "PiB":   ("Pebibyte (PiB)", 1024**5, "2^50"),
+            "KB":    ("Kilobyte (KB)", 1000, "10^3"),
+            "MB":    ("Megabyte (MB)", 1000**2, "10^6"),
+            "GB":    ("Gigabyte (GB)", 1000**3, "10^9"),
+            "TB":    ("Terabyte (TB)", 1000**4, "10^12"),
+            "PB":    ("Petabyte (PB)", 1000**5, "10^15")
+        }
+        self.unit_names = list(self.units_map.keys())
+
+    def parse_input(self, val_str: str) -> float:
+        """Parses German formatted number string to float."""
+        if not val_str:
+            raise ValueError("Empty input")
+        return float(val_str.replace(".", "").replace(",", "."))
+
+    def convert(self, val: float, src_unit: str, dst_unit: str) -> tuple[float, float]:
+        """Converts value from source unit to destination unit. Returns (result_value, bytes_value)."""
+        _, src_factor, _ = self.units_map[src_unit]
+        _, dst_factor, _ = self.units_map[dst_unit]
+        
+        bytes_val = val * src_factor
+        result = bytes_val / dst_factor
+        return result, bytes_val
+
+    def format_number(self, n: float) -> str:
+        """Formats float to German number string."""
+        if n >= 1 or n == 0:
+            res_str = f"{n:,.4f}".replace(",", "X").replace(".", ",").replace("X", ".")
+            if "," in res_str:
+                res_str = res_str.rstrip("0").rstrip(",")
+        else:
+            res_str = f"{n:.10f}".replace(".", ",")
+            res_str = res_str.rstrip("0").rstrip(",")
+        return res_str
+    
+    def generate_explanation(self, val: float, src: str, dst: str, bytes_val: float, result: float) -> str:
+        """Generates step-by-step explanation for the conversion."""
+        _, src_factor, src_base = self.units_map[src]
+        _, dst_factor, dst_base = self.units_map[dst]
+        
+        lines = []
+        
+        # Helper for formatting numbers in text (reusing format_number)
+        def fmt(n): return self.format_number(n)
+
+        # Schritt 1: Zu Bytes
+        if src == "Byte":
+            lines.append(f"1. {fmt(val)} {src} sind bereits Bytes.")
+        elif src == "Bit":
+            lines.append(f"1. {fmt(val)} {src} / 8 = {fmt(bytes_val)} Byte")
+        else:
+            op_str = f"* {fmt(src_factor)}"
+            if src_base != "-": op_str += f" ({src_base})"
+            lines.append(f"1. {fmt(val)} {src} in Byte umrechnen:")
+            lines.append(f"   {fmt(val)} {op_str} = {fmt(bytes_val)} Byte")
+
+        # Schritt 2: Zu Ziel
+        if dst == "Byte":
+            lines.append(f"2. {fmt(bytes_val)} Byte ist die Zieleinheit.")
+        elif dst == "Bit":
+            lines.append(f"2. {fmt(bytes_val)} Byte * 8 = {fmt(result)} Bit")
+        else:
+            res_str = self.format_number(result) # Use format_number for consistency
+            lines.append(f"2. {fmt(bytes_val)} Byte in {dst} umrechnen:")
+            op_str = f"/ {fmt(dst_factor)}"
+            if dst_base != "-": op_str += f" ({dst_base})"
+            lines.append(f"   {fmt(bytes_val)} {op_str} = {res_str} {dst}")
+            
+        return "\n".join(lines)
+
+
 class NetworkTab(ctk.CTkFrame):
     """
     Tab für Netzwerk-Berechnungen.
@@ -545,9 +628,12 @@ class UnitConverterTab(ctk.CTkFrame):
     """
     Tab für Einheiten-Umrechnung (Bit, Byte, KiB, KB, etc.).
     Features: Premium UI (Cards), Detaillierter Rechenweg (Text).
+    Uses UnitConverterEngine for logic.
     """
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
+        
+        self.engine = UnitConverterEngine()
         
         self.grid_columnconfigure(0, weight=1)
         self.grid_rowconfigure(0, weight=0) # Title
@@ -557,25 +643,6 @@ class UnitConverterTab(ctk.CTkFrame):
         # Title
         self.label_title = ctk.CTkLabel(self, text="Einheiten-Rechner", font=("Arial", 22, "bold"))
         self.label_title.grid(row=0, column=0, pady=(20, 15))
-
-        # Definitions
-        self.units_map = {
-            "Bit":   ("Bit (b)", 1/8, "-"),
-            "Byte":  ("Byte (B)", 1, "-"),
-            
-            "KiB":   ("Kibibyte (KiB)", 1024, "2^10"),
-            "MiB":   ("Mebibyte (MiB)", 1024**2, "2^20"),
-            "GiB":   ("Gibibyte (GiB)", 1024**3, "2^30"),
-            "TiB":   ("Tebibyte (TiB)", 1024**4, "2^40"),
-            "PiB":   ("Pebibyte (PiB)", 1024**5, "2^50"),
-            
-            "KB":    ("Kilobyte (KB)", 1000, "10^3"),
-            "MB":    ("Megabyte (MB)", 1000**2, "10^6"),
-            "GB":    ("Gigabyte (GB)", 1000**3, "10^9"),
-            "TB":    ("Terabyte (TB)", 1000**4, "10^12"),
-            "PB":    ("Petabyte (PB)", 1000**5, "10^15")
-        }
-        self.unit_names = list(self.units_map.keys())
 
         # --- Card 1: EINGABE ---
         self.card_in = ctk.CTkFrame(self, fg_color=("gray85", "gray25"), corner_radius=10)
@@ -590,13 +657,9 @@ class UnitConverterTab(ctk.CTkFrame):
         self.entry_amount.pack(side="left", padx=(0, 10))
         self.entry_amount.bind("<KeyRelease>", self.calculate)
         
-        self.option_src = ctk.CTkOptionMenu(self.frame_in_row, values=self.unit_names, command=self.calculate, width=120)
+        self.option_src = ctk.CTkOptionMenu(self.frame_in_row, values=self.engine.unit_names, command=self.calculate, width=120)
         self.option_src.set("GB")
         self.option_src.pack(side="left")
-
-        # --- Arrow ---
-        # self.lbl_arrow = ctk.CTkLabel(self, text="⬇", font=("Arial", 20))
-        # self.lbl_arrow.grid(row=2, column=0, pady=0)
 
         # --- Card 2: ERGEBNIS ---
         self.card_out = ctk.CTkFrame(self, fg_color=("white", "gray20"), corner_radius=10, border_width=2, border_color="#1f6aa5")
@@ -610,7 +673,7 @@ class UnitConverterTab(ctk.CTkFrame):
         self.label_result = ctk.CTkLabel(self.frame_out_row, text="---", font=("Consolas", 28, "bold"), text_color="#1f6aa5")
         self.label_result.pack(side="left", padx=(0, 10))
         
-        self.option_dst = ctk.CTkOptionMenu(self.frame_out_row, values=self.unit_names, command=self.calculate, width=120)
+        self.option_dst = ctk.CTkOptionMenu(self.frame_out_row, values=self.engine.unit_names, command=self.calculate, width=120)
         self.option_dst.set("GiB")
         self.option_dst.pack(side="right")
         
@@ -630,15 +693,14 @@ class UnitConverterTab(ctk.CTkFrame):
 
 
     def calculate(self, event=None):
+        val_str = self.entry_amount.get()
+        if not val_str:
+            self.label_result.configure(text="---")
+            self.set_explanation("")
+            return
+
         try:
-            # German Input: 1.000,50 -> 1000.50
-            # Remove thousands separator (.) then replace decimal separator (,) with (.)
-            val_str = self.entry_amount.get().replace(".", "").replace(",", ".")
-            if not val_str:
-                self.label_result.configure(text="---")
-                self.set_explanation("")
-                return
-            val = float(val_str)
+            val = self.engine.parse_input(val_str)
         except ValueError:
             self.label_result.configure(text="Err")
             self.set_explanation("Ungültige Eingabe.")
@@ -647,62 +709,19 @@ class UnitConverterTab(ctk.CTkFrame):
         src = self.option_src.get()
         dst = self.option_dst.get()
 
-        # Faktoren holen
-        _, src_factor, src_base = self.units_map[src]
-        _, dst_factor, dst_base = self.units_map[dst]
-        
-        # 1. In Bytes umrechnen
-        bytes_val = val * src_factor
-        
-        # 2. In Ziel-Einheit umrechnen
-        result = bytes_val / dst_factor
-
-        # Ergebnis anzeigen (German Format)
-        if result >= 1 or result == 0:
-            # Standard float formatting, then swap . and ,
-            # 1234.5678 -> 1.234,5678
-            res_str = f"{result:,.4f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            # Trim trailing zeros if decimal
-            if "," in res_str:
-                res_str = res_str.rstrip("0").rstrip(",")
-        else:
-            res_str = f"{result:.10f}".replace(".", ",")
-            res_str = res_str.rstrip("0").rstrip(",")
-
-        self.label_result.configure(text=res_str)
-        self.label_unit_full.configure(text=self.units_map[dst][0])
-
-        # Erklärung generieren
-        lines = []
-        
-        # Helper for formatting numbers in text
-        def fmt(n):
-            s = f"{n:,.10f}".rstrip("0").rstrip(".")
-            return s.replace(",", "X").replace(".", ",").replace("X", ".")
-
-        # Schritt 1: Zu Bytes
-        if src == "Byte":
-            lines.append(f"1. {fmt(val)} {src} sind bereits Bytes.")
-        elif src == "Bit":
-            lines.append(f"1. {fmt(val)} {src} / 8 = {fmt(bytes_val)} Byte")
-        else:
-            op_str = f"* {fmt(src_factor)}"
-            if src_base != "-": op_str += f" ({src_base})"
-            lines.append(f"1. {fmt(val)} {src} in Byte umrechnen:")
-            lines.append(f"   {fmt(val)} {op_str} = {fmt(bytes_val)} Byte")
-
-        # Schritt 2: Zu Ziel
-        if dst == "Byte":
-            lines.append(f"2. {fmt(bytes_val)} Byte ist die Zieleinheit.")
-        elif dst == "Bit":
-            lines.append(f"2. {fmt(bytes_val)} Byte * 8 = {fmt(result)} Bit")
-        else:
-            lines.append(f"2. {fmt(bytes_val)} Byte in {dst} umrechnen:")
-            op_str = f"/ {fmt(dst_factor)}"
-            if dst_base != "-": op_str += f" ({dst_base})"
-            lines.append(f"   {fmt(bytes_val)} {op_str} = {res_str} {dst}")
-
-        self.set_explanation("\n".join(lines))
+        try:
+            result, bytes_val = self.engine.convert(val, src, dst)
+            
+            res_str = self.engine.format_number(result)
+            self.label_result.configure(text=res_str)
+            self.label_unit_full.configure(text=self.engine.units_map[dst][0])
+            
+            explanation = self.engine.generate_explanation(val, src, dst, bytes_val, result)
+            self.set_explanation(explanation)
+            
+        except Exception as e:
+            self.label_result.configure(text="Err")
+            self.set_explanation(f"Fehler: {str(e)}")
 
     def set_explanation(self, text):
         self.txt_explanation.configure(state="normal")
