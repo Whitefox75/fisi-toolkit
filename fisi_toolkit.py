@@ -1,10 +1,8 @@
 import customtkinter as ctk
 import tkinter as tk
 from tkinter import messagebox
-import math
 import ipaddress
 import pyperclip
-import random
 import os
 import sys
 
